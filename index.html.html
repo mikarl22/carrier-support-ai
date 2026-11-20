@@ -1,0 +1,809 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2563eb">
+<title>進路情報 ＆ Compass Zero ＆ 経験学習サイクル</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root{--blue:#2563eb;--ink:#14213d;--muted:#64748b;--line:#e2e8f0;--pale:#eff6ff;--warn:#a34b00;--bg:#f1f5f9;--success:#15803d}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif;font-size:15px}
+.app{width:min(100%,760px);min-height:100dvh;margin:auto;background:#fff;box-shadow:0 0 32px #0f172a12;position:relative}
+header{position:sticky;top:0;z-index:50;padding:14px 20px 12px;border-bottom:1px solid var(--line);background:#fffffff2;backdrop-filter:blur(12px)}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{display:grid;place-items:center;width:31px;height:31px;border-radius:10px;background:var(--blue);color:#fff;font-weight:900}
+.brand h1{font-size:19px;margin:0;letter-spacing:.04em}
+.sub{margin:4px 0 0 41px;color:var(--muted);font-size:11px}
+main{padding:18px 16px 98px}
+.screen{display:none;animation:in .18s ease}
+.screen.active{display:block}
+@keyframes in{from{opacity:.45;transform:translateY(4px)}to{opacity:1;transform:none}}
+h2{margin:4px 0 14px;font-size:22px;letter-spacing:-.03em}
+h3{margin:0 0 7px;font-size:15px}
+p{line-height:1.65;color:#475569}
+.small{font-size:12px;color:var(--muted);line-height:1.55}
+.card{margin:11px 0;border:1px solid var(--line);border-radius:18px;padding:15px;background:#fff}
+.hero{padding:22px 19px;background:linear-gradient(135deg,#dbeafe 0%,#eff6ff 58%,#fff 100%);border:0}
+.hero h2{font-size:25px;margin-bottom:7px}
+.hero p{margin:0 0 17px}
+.notice{border-left:4px solid #f59e0b;background:#fffbeb;padding:10px 12px;border-radius:8px;color:#713f12;font-size:12px;line-height:1.55}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.feature{min-height:118px;text-align:left;cursor:pointer}
+.feature .icon{font-size:25px;display:block;margin-bottom:7px}
+.feature b{font-size:15px}
+button,input,textarea{font:inherit;touch-action:manipulation}
+button{cursor:pointer;color:inherit;position:relative;z-index:10}
+.primary,.secondary,.choice,.opt,.chip{border-radius:12px;padding:12px 13px;border:1px solid #cbd5e1;background:#fff}
+.primary{width:100%;border-color:var(--blue);background:var(--blue);color:#fff;font-weight:750}
+.secondary{color:var(--blue);border-color:#bfdbfe;background:#fff}
+.choice{width:100%;text-align:left}
+.choice[aria-pressed=true]{color:#174ea6;border:2px solid var(--blue);padding:11px 12px;background:var(--pale);font-weight:700}
+.choice:focus-visible,button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #93c5fd;outline-offset:2px}
+.tag,.badge,.chip{display:inline-block;border:0;padding:5px 8px;border-radius:999px;font-size:11px}
+.tag{background:#e0e7ff;color:#3730a3}
+.badge{background:#e2e8f0;color:#334155;font-weight:700}
+.badge.demo{background:#fef3c7;color:#92400e}
+.chip{background:#f8fafc;border:1px solid #dbe4ef;margin:3px;color:#334155}
+.source{margin:10px 0 0;font-size:11px;color:var(--muted);line-height:1.65}
+.source a{color:#1d4ed8}
+.unknown{color:var(--warn);font-weight:700}
+.article h3{margin-top:8px}
+.article p{font-size:13px;margin:5px 0}
+.question{font-weight:700;color:var(--ink)}
+.opt{display:block;width:100%;text-align:left;margin:7px 0}
+.opt.ok{border-color:#86efac;background:#f0fdf4}
+.opt.no{border-color:#fecaca;background:#fef2f2}
+.result{margin-top:10px;padding:12px;border-radius:12px;background:#f8fafc}
+.result p{margin:5px 0}
+.check{display:flex;align-items:flex-start;gap:10px;padding:9px 2px;cursor:pointer}
+.check input{margin:2px 0 0;width:18px;height:18px;accent-color:var(--blue)}
+textarea,input[type=text]{width:100%;border:1px solid #cbd5e1;border-radius:12px;padding:12px;background:#fff}
+.inputrow{display:flex;gap:8px}
+.inputrow input{min-width:0}
+.msg{margin:10px 0;padding:11px 12px;border-radius:11px;background:#fef2f2;color:#b91c1c;font-size:13px}
+.tablewrap{overflow:auto;border:1px solid var(--line);border-radius:12px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{min-width:125px;padding:10px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);text-align:left;vertical-align:top;line-height:1.5}
+th{background:#f8fafc;color:#334155}
+nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(100%,760px);z-index:100;display:grid;grid-template-columns:repeat(6,1fr);padding:6px 4px calc(7px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:#fffffff2;backdrop-filter:blur(12px)}
+nav button{border:0;background:transparent;color:var(--muted);font-size:9.5px;padding:5px 1px}
+nav button[aria-current=page]{color:var(--blue);font-weight:800}
+nav .navicon{display:block;font-size:17px;height:20px}
+@media(min-width:600px){main{padding:24px 28px 100px}.hero{padding:28px}.grid{gap:14px}}
+.card-shadow { box-shadow: 0 10px 25px -5px rgba(0,0,0,0.06); }
+@media print { .no-print { display: none !important; } }
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="brand"><span class="logo">進</span><h1>進路情報</h1></div>
+  <div class="sub">迷いを、次の一歩に変える進路サポート</div>
+</header>
+<main>
+
+<!-- ホーム画面 -->
+<section id="home" class="screen active" aria-label="ホーム">
+ <div class="hero card"><span class="badge demo">試作版</span><h2>まず、何から始めますか？</h2><p>今の気がかりを整理して、調べる順番を見つけましょう。</p><button type="button" class="primary" data-go="navigator">進路ナビを使う</button></div>
+ <div class="notice">このサイトは進路を決めるための<strong>情報整理のデモ</strong>です。学校ごとの募集要項・学費・入試科目は、必ず公式サイトで確認してください。</div>
+ <div class="grid" style="margin-top:12px">
+   <button type="button" class="card feature" data-go="compare"><span class="icon">⚖️</span><b>進路比較</b><br><span class="small">候補を並べて見る</span></button>
+   <button type="button" class="card feature" data-go="search"><span class="icon">⌕</span><b>情報を探す</b><br><span class="small">公式情報への入口</span></button>
+ </div>
+ 
+ <!-- Compass Zero への導線カード -->
+ <div class="card feature" style="margin-top:10px; min-height:auto;" data-go="compass">
+   <span class="icon">🧭</span><b>Compass Zero</b><br><span class="small">心地よさから適正を見つける1分診断</span>
+ </div>
+
+ <!-- 経験学習サイクル への導線カード -->
+ <div class="card feature" style="margin-top:10px; min-height:auto;" data-go="cycle">
+   <span class="icon">🔄</span><b>経験学習サイクル</b><br><span class="small">問いを深掘りして振り返りシートを作る</span>
+ </div>
+
+ <h3 style="margin-top:23px">おすすめのテーマ</h3><div id="featured"></div>
+ <div class="card"><h3>進路ミニクイズ</h3><div id="quiz"></div></div>
+</section>
+
+<!-- 進路ナビ画面 -->
+<section id="navigator" class="screen" aria-label="進路ナビ"><h2>進路ナビ</h2><p><span class="badge demo">デモ・AI未接続</span> 選んだ内容に応じて、あらかじめ用意した一般的な次の行動を表示します。入力は保存・送信されません。</p><div class="card"><h3>1. 今の状況</h3><div class="grid" id="status"></div></div><div class="card"><h3>2. 学年</h3><div class="grid" id="grade"></div></div><div class="card"><h3>3. 今の気がかり（複数選択可）</h3><div id="concerns"></div></div><div class="card"><h3>4. 気になること（任意）</h3><textarea id="free" maxlength="300" placeholder="例：文系・理系のどちらにするか迷っている"></textarea></div><button type="button" class="primary" id="analyze">次の行動を整理する</button><div id="analysis" aria-live="polite"></div></section>
+
+<!-- 進路比較画面 -->
+<section id="compare" class="screen" aria-label="進路比較"><h2>進路比較</h2><p>一般的な説明と、確認できていない項目を分けて表示します。根拠のない順位や「おすすめ度」は表示しません。</p><div class="card"><h3>比較する分野を追加（2〜3件）</h3><div class="inputrow"><input id="candidate" type="text" maxlength="30" placeholder="例：情報工学"><button type="button" class="secondary" id="add">追加</button></div><div id="presets" style="margin-top:10px"></div><div id="selected"></div><div id="compareMsg" role="alert"></div></div><div class="card"><h3>表示する比較項目</h3><div id="factors"></div></div><button type="button" class="primary" id="makeTable">比較表を見る</button><div id="tableResult" aria-live="polite"></div></section>
+
+<!-- 情報検索画面 -->
+<section id="search" class="screen" aria-label="情報検索"><h2>情報を探す</h2><p>テーマごとに、公的機関などの公式サイトへの入口をまとめています。</p><div class="inputrow"><input id="query" type="text" placeholder="例：奨学金、文理選択、入試"><button type="button" class="secondary" id="searchBtn">検索</button></div><div id="categories" style="margin-top:9px"></div><div id="searchResult" aria-live="polite"></div></section>
+
+<!-- Compass Zero 診断画面 -->
+<section id="compass" class="screen" aria-label="Compass Zero">
+  <div class="w-full mx-auto flex flex-col items-center">
+      <div class="flex items-center gap-2 mb-6">
+          <span class="text-lg">🧭</span>
+          <span class="font-bold text-slate-700 tracking-wide text-lg">Compass Zero</span>
+      </div>
+
+      <!-- ① 最初の画面 -->
+      <div id="c-screen-top" class="w-full text-center space-y-8 py-6">
+          <div class="space-y-3">
+              <h2 class="text-xl font-bold text-slate-500">好きなこと、なくていい。</h2>
+              <h1 class="text-2xl font-black text-slate-900 leading-snug">
+                  自分の「心地よさ」から<br>本当の適正を見つける
+              </h1>
+          </div>
+          <div class="pt-4">
+              <button type="button" onclick="startCompassQuiz()" class="w-full py-4 bg-sky-300 hover:bg-sky-400 text-slate-800 font-bold rounded-2xl shadow-md transition-all active:scale-95 text-base">
+                  1分で診断をはじめる
+              </button>
+              <p class="text-xs text-slate-400 mt-3">所要時間：約1分（全30問）</p>
+          </div>
+      </div>
+
+      <!-- ② 診断中（スワイプ画面） -->
+      <div id="c-screen-quiz" class="w-full hidden space-y-6">
+          <div class="flex justify-between items-center text-xs font-bold text-slate-400 px-2">
+              <span id="c-progress-text">カード: 1 / 30</span>
+              <span>⏱️ 1分診断中</span>
+          </div>
+
+          <div class="w-full bg-white border border-slate-200 rounded-3xl p-8 card-shadow text-center min-h-[220px] flex flex-col justify-center">
+              <span class="text-xs font-bold text-sky-600 bg-sky-50 px-3 py-1 rounded-full w-fit mx-auto mb-4" id="c-card-cat">日常の整理</span>
+              <p id="c-card-text" class="text-lg font-bold text-slate-800 leading-relaxed">
+                  スマホのカメラロールに溜まった写真を、綺麗にフォルダ分けして整理する
+              </p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4 pt-2">
+              <button type="button" onclick="answerCompassCard(false)" class="py-4 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-2xl border border-rose-200 transition-all active:scale-95 text-center">
+                  苦手
+              </button>
+              <button type="button" onclick="answerCompassCard(true)" class="py-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold rounded-2xl border border-emerald-200 transition-all active:scale-95 text-center">
+                  平気
+              </button>
+          </div>
+      </div>
+
+      <!-- ③ ローディング画面 -->
+      <div id="c-screen-loading" class="w-full text-center space-y-8 py-16 hidden">
+          <div class="relative w-32 h-32 mx-auto flex items-center justify-center">
+              <div class="absolute inset-0 border-4 border-sky-100 border-t-sky-500 rounded-full animate-spin"></div>
+              <span class="text-3xl">🧭</span>
+          </div>
+          <div class="space-y-2">
+              <h3 class="text-xl font-bold text-slate-800">AIがあなたのトリセツを生成中...</h3>
+              <p class="text-xs text-slate-400">隠れた才能と適性を分析しています</p>
+          </div>
+      </div>
+
+      <!-- ④ 結果画面 -->
+      <div id="c-screen-result" class="w-full space-y-6 hidden pb-10">
+          <div class="text-center bg-white p-6 rounded-3xl border border-slate-100 card-shadow space-y-2">
+              <span class="text-xs text-slate-400 font-bold" id="c-result-code">コード: SKBT</span>
+              <h3 class="text-xl font-black text-slate-900" id="c-result-title">「電脳世界を創る神託の建築家」</h3>
+          </div>
+
+          <div class="bg-white p-6 rounded-3xl border border-slate-100 card-shadow text-center space-y-4">
+              <div class="bg-sky-50/60 p-4 rounded-2xl border border-sky-100/50">
+                  <p class="text-xs text-slate-500 font-bold mb-1">🧠 4軸バランス診断</p>
+                  <div id="c-axis-scores" class="grid grid-cols-2 gap-2 text-xs font-bold text-slate-700 mt-2"></div>
+              </div>
+
+              <div class="text-left space-y-4 pt-2">
+                  <div class="space-y-1">
+                      <h4 class="text-xs font-bold text-sky-600 uppercase tracking-wider">✨ 得意なこと・本領を発揮する瞬間</h4>
+                      <p id="c-result-desc" class="text-xs text-slate-600 leading-relaxed font-medium bg-slate-50 p-3 rounded-xl border border-slate-100"></p>
+                  </div>
+                  <div class="space-y-1">
+                      <h4 class="text-xs font-bold text-amber-600 uppercase tracking-wider">💡 日常でのあるある</h4>
+                      <p id="c-result-aruaru" class="text-xs text-slate-600 leading-relaxed font-medium bg-amber-50/50 p-3 rounded-xl border border-amber-100/50"></p>
+                  </div>
+                  <div class="space-y-1">
+                      <h4 class="text-xs font-bold text-emerald-600 uppercase tracking-wider">📚 得意な可能性が高い教科</h4>
+                      <p id="c-result-subjects" class="text-xs text-slate-700 font-bold bg-emerald-50/50 p-3 rounded-xl border border-emerald-100/50"></p>
+                  </div>
+              </div>
+          </div>
+
+          <button type="button" onclick="showCompassCareerScreen()" class="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-2xl shadow-md transition-all text-sm">
+              自分らしい進路を見る ➔
+          </button>
+          <button type="button" onclick="resetCompass()" class="w-full py-2 text-xs text-slate-400 hover:text-slate-600">
+              最初に戻る
+          </button>
+      </div>
+
+      <!-- ⑤ 自分らしい進路画面 -->
+      <div id="c-screen-career" class="w-full space-y-6 hidden pb-10">
+          <div class="text-center bg-white p-6 rounded-3xl border border-slate-100 card-shadow space-y-1">
+              <span class="text-xs text-sky-600 font-bold">Compass Zero - Career Guide</span>
+              <h3 class="text-lg font-black text-slate-900">あなたにフィットする環境・進路</h3>
+          </div>
+
+          <div class="bg-white p-6 rounded-3xl border border-slate-100 card-shadow space-y-5 text-left">
+              <div class="space-y-2">
+                  <h4 class="text-xs font-bold text-indigo-600 uppercase tracking-wider">🎓 おすすめの大学学部・学科</h4>
+                  <ul id="c-career-faculties" class="space-y-2 text-xs text-slate-700 font-medium bg-indigo-50/50 p-3 rounded-xl border border-indigo-100/60"></ul>
+              </div>
+              <div class="space-y-2">
+                  <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">🏢 居心地の良い環境・ポジション</h4>
+                  <p id="c-career-env" class="text-xs text-slate-700 font-medium leading-relaxed bg-slate-50 p-3 rounded-xl"></p>
+              </div>
+              <div class="space-y-2">
+                  <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">🌱 おすすめの進路・選択肢</h4>
+                  <ul id="c-career-routes" class="space-y-2 text-xs text-slate-700 font-medium"></ul>
+              </div>
+              <div class="space-y-2">
+                  <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">💡 心地よく働くためのコツ</h4>
+                  <p id="c-career-advice" class="text-xs text-slate-700 font-medium leading-relaxed bg-sky-50/50 p-3 rounded-xl border border-sky-100"></p>
+              </div>
+          </div>
+
+          <button type="button" onclick="backToCompassResult()" class="w-full py-4 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-2xl transition-all text-sm">
+              ← 診断結果に戻る
+          </button>
+      </div>
+  </div>
+</section>
+
+<!-- 経験学習サイクル 画面 -->
+<section id="cycle" class="screen" aria-label="経験学習サイクル">
+  <div class="flex items-center gap-2 mb-4">
+      <span class="text-lg">🔄</span>
+      <span class="font-bold text-slate-700 tracking-wide text-lg">経験学習サイクル</span>
+  </div>
+
+  <!-- ステップ1：問いのブレインストーミング -->
+  <div id="cycle-step1" class="cycle-step">
+      <h2>1. 問いのブレインストーミング</h2>
+      <p class="small">所要時間：30分ほど。お友達と一緒に、ひとりでも。</p>
+      <p class="small" style="margin-top: 4px;">知りたいことをできるだけ多く書いてみよう</p>
+      
+      <div class="inputrow" style="margin-top: 12px;">
+          <input type="text" id="cycle-qInput" maxlength="50" placeholder="例：AIは将来どんな仕事に関わるか？">
+          <button type="button" class="secondary" onclick="addCycleQuestion()">追加</button>
+      </div>
+      
+      <ul id="cycle-qList" style="list-style: none; padding: 0; margin-top: 12px;"></ul>
+      
+      <hr style="border:0; border-top:1px solid var(--line); margin: 20px 0;">
+      <button type="button" class="primary" onclick="cycleNext(1)">つぎへ ➔</button>
+  </div>
+
+  <!-- ステップ2：取り組む問いの選択 -->
+  <div id="cycle-step2" class="cycle-step" style="display: none;">
+      <h2>2. 取り組む問いの選択</h2>
+      <p>先ほどあげた「知りたいこと」の中から、今日深掘りしたいものを1つ選んでください。</p>
+      
+      <div class="card" style="background: #f8fafc; margin-top: 12px;">
+          <div id="cycle-radioList" class="space-y-2"></div>
+      </div>
+      
+      <hr style="border:0; border-top:1px solid var(--line); margin: 20px 0;">
+      <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 8px;">
+          <button type="button" class="secondary" onclick="cyclePrev(2)">← まえへ</button>
+          <button type="button" class="primary" onclick="cycleNext(2)">つぎへ ➔</button>
+      </div>
+  </div>
+
+  <!-- ステップ3：探索・調査 -->
+  <div id="cycle-step3" class="cycle-step" style="display: none;">
+      <div class="notice" style="margin-bottom: 12px;">選んだ問い：<strong id="cycle-disp1" class="cycle-display-question" style="color:var(--blue);"></strong></div>
+      <p>調べたことを自由に書いてみよう</p>
+      
+      <textarea id="cycle-researchArea" rows="8" placeholder="調べた内容を入力してください..." style="margin-top: 12px;"></textarea>
+      
+      <hr style="border:0; border-top:1px solid var(--line); margin: 20px 0;">
+      <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 8px;">
+          <button type="button" class="secondary" onclick="cyclePrev(3)">← まえへ</button>
+          <button type="button" class="primary" onclick="cycleNext(3)">つぎへ ➔</button>
+      </div>
+  </div>
+
+  <!-- ステップ4：省察・感想 -->
+  <div id="cycle-step4" class="cycle-step" style="display: none;">
+      <div class="notice" style="margin-bottom: 12px;">選んだ問い：<strong id="cycle-disp2" class="cycle-display-question" style="color:var(--blue);"></strong></div>
+      <p>やってみてどう感じた？（ここにワクワクした、難しかった など）</p>
+      
+      <textarea id="cycle-reflectionArea" rows="8" placeholder="感じたこと・気づいたことを入力してください..." style="margin-top: 12px;"></textarea>
+      
+      <hr style="border:0; border-top:1px solid var(--line); margin: 20px 0;">
+      <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 8px;">
+          <button type="button" class="secondary" onclick="cyclePrev(4)">← まえへ</button>
+          <button type="button" class="primary" onclick="cycleNext(4)">つぎへ ➔</button>
+      </div>
+  </div>
+
+  <!-- ステップ5：概念化・今後の活用 -->
+  <div id="cycle-step5" class="cycle-step" style="display: none;">
+      <div class="notice" style="margin-bottom: 12px;">選んだ問い：<strong id="cycle-disp3" class="cycle-display-question" style="color:var(--blue);"></strong></div>
+      <p>次に調べるなら、どんな方法やリンクが使えそう？記録しておこう</p>
+      
+      <textarea id="cycle-nextStepsArea" rows="8" placeholder="次回の探索方法や参考リンクを入力してください..." style="margin-top: 12px;"></textarea>
+      
+      <hr style="border:0; border-top:1px solid var(--line); margin: 20px 0;">
+      <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 8px;">
+          <button type="button" class="secondary" onclick="cyclePrev(5)">← まえへ</button>
+          <button type="button" class="primary" onclick="cycleNext(5)">振り返りシートを見る ➔</button>
+      </div>
+  </div>
+
+  <!-- ステップ6：まとめ・振り返りシート -->
+  <div id="cycle-step6" class="cycle-step" style="display: none;">
+      <h2>振り返りシート</h2>
+      
+      <div class="card" style="margin-top: 12px;">
+          <h3 style="color: var(--blue);">1. あなたが選んだ問い</h3>
+          <p id="cycle-resQuestion" style="font-weight: bold;"></p>
+      </div>
+      
+      <div class="card">
+          <h3 style="color: var(--blue);">2. 調べたこと</h3>
+          <p id="cycle-resResearch"></p>
+      </div>
+      
+      <div class="card">
+          <h3 style="color: var(--blue);">3. 感想・気づき</h3>
+          <p id="cycle-resReflection"></p>
+      </div>
+      
+      <div class="card">
+          <h3 style="color: var(--blue);">4. 次に使える方法・リンク</h3>
+          <p id="cycle-resNextSteps"></p>
+      </div>
+      
+      <hr style="border:0; border-top:1px solid var(--line); margin: 20px 0;" class="no-print">
+      <div class="grid no-print" style="grid-template-columns: 1fr 1fr; gap: 8px;">
+          <button type="button" class="secondary" onclick="cyclePrev(6)">← まえへ</button>
+          <button type="button" class="primary" onclick="window.print()">PDFで出力（印刷）</button>
+      </div>
+  </div>
+</section>
+
+</main>
+<nav aria-label="メインメニュー">
+  <button type="button" data-go="home"><span class="navicon">⌂</span>ホーム</button>
+  <button type="button" data-go="search"><span class="navicon">⌕</span>検索</button>
+  <button type="button" data-go="navigator"><span class="navicon">◎</span>進路ナビ</button>
+  <button type="button" data-go="compare"><span class="navicon">⇄</span>進路比較</button>
+  <button type="button" data-go="compass"><span class="navicon">🧭</span>診断</button>
+  <button type="button" data-go="cycle"><span class="navicon">🔄</span>サイクル</button>
+</nav>
+</div>
+
+<script>
+const $=id=>document.getElementById(id), esc=s=>String(s).replace(/[&<>'"]/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[x]));
+const sources={mext:{name:'文部科学省',url:'https://www.mext.go.jp/',note:'制度・入試情報は対象校のページで再確認してください'},jasso:{name:'日本学生支援機構（JASSO）',url:'https://www.jasso.go.jp/',note:'奨学金の条件・締切は必ず最新の募集情報を確認してください'}};
+const articles=[
+ {title:'大学・学部・学科の基本',cat:'大学制度',tags:['大学','学部','学科'],text:'大学制度の用語を整理し、選択肢を広げるための入口です。',src:'mext'},
+ {title:'奨学金と学費を調べる',cat:'奨学金',tags:['奨学金','学費','給付','貸与'],text:'費用の話を、公式情報から確認するための入口です。',src:'jasso'},
+ {title:'文理選択を考えるときに',cat:'文理選択',tags:['文系','理系','文理'],text:'今すぐ結論を急がず、学びたい内容から考えるヒントです。',src:'mext'},
+ {title:'入試方式の種類を知る',cat:'入試',tags:['入試','一般選抜','推薦','受験'],text:'選抜方法の用語を確認するための入口です。',src:'mext'}];
+const sourceLine=k=>{let s=sources[k];return `出典：<a href="${s.url}" target="_blank" rel="noopener noreferrer">${s.name}（公式サイト）</a><br>確認・更新状況：<span class="unknown">この試作では個別ページ・更新日を未確認</span><br>${s.note}`};
+function article(a){return `<article class="card article"><span class="tag">${esc(a.cat)}</span><h3>${esc(a.title)}</h3><p>${esc(a.text)}</p><div class="source">${sourceLine(a.src)}</div></article>`}
+
+function show(id){
+    if(!$(id))id='home';
+    document.querySelectorAll('.screen').forEach(x=>x.classList.toggle('active',x.id===id));
+    document.querySelectorAll('nav button').forEach(x=>x.dataset.go===id?x.setAttribute('aria-current','page'):x.removeAttribute('aria-current'));
+    if(location.hash!=='#'+id)history.replaceState(null,'','#'+id);
+    window.scrollTo({top:0,behavior:'smooth'});
+}
+
+document.addEventListener('click',e=>{
+    let b=e.target.closest('[data-go]');
+    if(b){
+        show(b.dataset.go);
+        if(b.dataset.keyword){$('query').value=b.dataset.keyword;search();}
+    }
+});
+window.addEventListener('popstate',()=>show(location.hash.slice(1)||'home'));
+
+$('featured').innerHTML=articles.slice(0,2).map(article).join('');
+
+const quiz={q:'大学の用語で「学部」と「学科」の一般的な大きさとして正しいのは？',choices:['学部の方が大きい','学科の方が大きい'],answer:0};
+$('quiz').innerHTML=`<p class="question">${quiz.q}</p>${quiz.choices.map((x,i)=>`<button type="button" class="opt" data-quiz="${i}">${x}</button>`).join('')}<div id="quizAnswer" aria-live="polite"></div>`;
+$('quiz').onclick=e=>{
+    let b=e.target.closest('[data-quiz]');
+    if(!b)return;
+    let ok=+b.dataset.quiz===quiz.answer;
+    b.classList.add(ok?'ok':'no');
+    $('quizAnswer').innerHTML=`<div class="result"><b>${ok?'正解！':'ヒント：もう一度考えてみましょう'}</b><p>一般に、学部は大きな分野、学科はその中の専門分野を表します。ただし名称や構成は大学ごとに異なります。</p><div class="source">${sourceLine('mext')}</div></div>`;
+};
+
+const state={status:'',grade:'',candidates:[]};
+function choices(id,items,key){
+    $(id).innerHTML=items.map(x=>`<button type="button" class="choice" aria-pressed="false">${x}</button>`).join('');
+    $(id).onclick=e=>{
+        let b=e.target.closest('.choice');
+        if(!b)return;
+        $(id).querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));
+        state[key]=b.textContent;
+    }
+}
+choices('status',['候補がある','まだ決まっていない','決まっている'],'status');
+choices('grade',['高校1年','高校2年','高校3年','その他'],'grade');
+
+const concerns=['やりたいことが分からない','自分に向く進路が分からない','大学・学部を比較したい','情報が多すぎる','文理選択で迷う','学費・奨学金が気になる'];
+$('concerns').innerHTML=concerns.map(x=>`<label class="check"><input type="checkbox" value="${x}">${x}</label>`).join('');
+
+const next={ 'やりたいことが分からない':['選択肢を広げるため、まず「大学制度」の基本を読んでみる','search','大学制度'], '自分に向く進路が分からない':['気になる分野を2つだけ選び、共通点と違いを比較してみる','compare'], '大学・学部を比較したい':['候補を2〜3件追加して、分かっていることと未確認のことを並べる','compare'], '情報が多すぎる':['いま必要なテーマを一つに絞り、公式情報から読む','search','入試'], '文理選択で迷う':['文理選択の情報を読み、学びたい内容を一つ書き出してみる','search','文理選択'], '学費・奨学金が気になる':['制度を確認したうえで、学校・家族に相談する項目をメモする','search','奨学金']};
+
+$('analyze').onclick=()=>{
+    let cs=[...document.querySelectorAll('#concerns input:checked')].map(x=>x.value),free=$('free').value.trim();
+    if(!cs.length&&!free){$('analysis').innerHTML='<div class="msg">気がかりを1つ以上選ぶか、気になることを書いてください。</div>';return;}
+    let missing=[];if(!state.status)missing.push('今の状況');if(!state.grade)missing.push('学年');
+    let h='<div class="card"><h3>次の一歩 <span class="badge demo">デモの提案</span></h3>';
+    h+=`<p>状況：${esc(state.status||'未入力')} ／ 学年：${esc(state.grade||'未入力')}</p>`;
+    if(missing.length)h+=`<div class="notice">より整理しやすくするために、「${missing.join('・')}」も選んでみてください。</div>`;
+    if(state.grade==='高校3年'&&state.status==='まだ決まっていない')h+='<p>時間が限られる場合は、学校の進路担当や家族にも早めに相談し、公式の募集要項を確認してください。</p>';
+    if(state.grade==='高校1年')h+='<p>今は決め切らなくても大丈夫です。選択肢を知ることから始められます。</p>';
+    h+='<p class="small">以下は個別の適性判断や進学指導ではなく、試作の一般的な案内です。</p>';
+    cs.forEach(c=>{let a=next[c];h+=`<button type="button" class="opt" data-go="${a[1]}" ${a[2]?`data-keyword="${a[2]}"`:''}>${esc(c)}<br><b>→ ${a[0]}</b></button>`});
+    if(free)h+=`<div class="result"><b>書いてくれたこと</b><p>${esc(free)}</p><p class="small">この入力をもとにした個別の判断は行いません。気になる点は、先生・家族・学校の相談窓口などにも相談してください。</p></div>`;
+    $('analysis').innerHTML=h+'</div>';
+};
+
+const known={'情報工学':'コンピュータ、データ、情報処理などを扱う分野（一般的な説明。大学により異なります）。','経済学':'お金・市場・社会のしくみを扱う分野（一般的な説明。大学により異なります）。','心理学':'人の心や行動を研究する分野（一般的な説明。大学により異なります）。'};
+const rows=[['学べる内容','learn'],['入試方式'],['必要科目'],['学費'],['取得可能な資格'],['卒業後の進路'],['通学条件']];
+$('presets').innerHTML=Object.keys(known).map(x=>`<button type="button" class="chip" data-preset="${x}">${x}</button>`).join('');
+$('factors').innerHTML=rows.map((r,i)=>`<label class="check"><input class="factor" type="checkbox" value="${i}" ${i===0||i===3?'checked':''}>${r[0]}</label>`).join('');
+
+function renderCandidates(){
+    $('selected').innerHTML=state.candidates.length?`<p class="small">選択中</p>`+state.candidates.map((x,i)=>`<span class="chip">${esc(x)} <button type="button" aria-label="${esc(x)}を削除" data-remove="${i}" style="border:0;background:none;padding:0 0 0 4px">×</button></span>`).join('')+``:'<p class="small">まだ選択されていません</p>';
+}
+function addCandidate(x){
+    x=x.trim();$('compareMsg').innerHTML='';
+    if(!x)return $('compareMsg').innerHTML='<div class="msg">分野・学部名を入力してください。</div>';
+    if(state.candidates.includes(x))return $('compareMsg').innerHTML='<div class="msg">すでに追加されています。</div>';
+    if(state.candidates.length===3)return $('compareMsg').innerHTML='<div class="msg">比較できるのは3件までです。</div>';
+    state.candidates.push(x);$('candidate').value='';renderCandidates();
+}
+document.addEventListener('click',e=>{
+    let p=e.target.closest('[data-preset]');if(p)addCandidate(p.dataset.preset);
+    let r=e.target.closest('[data-remove]');if(r){state.candidates.splice(+r.dataset.remove,1);renderCandidates();}
+});
+$('add').onclick=()=>addCandidate($('candidate').value);
+$('candidate').onkeydown=e=>{if(e.key==='Enter')addCandidate(e.target.value)};
+renderCandidates();
+
+$('makeTable').onclick=()=>{
+    let out=$('tableResult'),selected=[...document.querySelectorAll('.factor:checked')].map(x=>+x.value);
+    if(state.candidates.length<2){out.innerHTML='<div class="msg">比較する分野を2件以上追加してください。</div>';return;}
+    if(!selected.length){out.innerHTML='<div class="msg">比較項目を1つ以上選んでください。</div>';return;}
+    let html='<div class="card"><h3>比較表</h3><div class="tablewrap"><table><tr><th>項目</th>'+state.candidates.map(x=>'<th>'+esc(x)+'</th>').join('')+'</tr>';
+    selected.forEach(i=>{
+        let row=rows[i],cells=state.candidates.map(c=>{let value=(row[1]==='learn'&&known[c])?esc(known[c]):'<span class="unknown">未確認</span>';return '<td>'+value+'</td>'}).join('');
+        html+='<tr><th>'+row[0]+'</th>'+cells+'</tr>';
+    });
+    html+='</table></div><p class="source">「未確認」は情報を取得・検証していない項目です。実際の大学・学部の入試、学費、資格、就職等は各校の公式サイト・募集要項で確認してください。</p></div>';
+    out.innerHTML=html;
+};
+
+const norm=x=>x.normalize('NFKC').toLowerCase().trim();
+function search(){
+    let q=norm($('query').value);
+    if(!q){$('searchResult').innerHTML='<div class="msg">キーワードを入力するか、カテゴリを選んでください。</div>';return;}
+    let synonyms={奨学金:['学費','給付','貸与'],文理選択:['文系','理系','文理'],入試:['受験','選抜','推薦'],大学制度:['大学','学部','学科']};
+    let terms=[q];Object.entries(synonyms).forEach(([k,v])=>{if([k,...v].some(x=>q.includes(x)||x.includes(q)))terms.push(k,...v)});
+    let hits=articles.filter(a=>terms.some(t=>norm([a.title,a.cat,...a.tags,a.text].join(' ')).includes(t)));
+    if(hits.length){$('searchResult').innerHTML='<p class="small">'+hits.length+'件のテーマ</p>'+hits.map(article).join('');}
+    else{
+        let buttons=articles.map(a=>'<button type="button" class="chip" data-category="'+a.cat+'">'+a.cat+'</button>').join('');
+        $('searchResult').innerHTML='<div class="card"><h3>「'+esc($('query').value)+'」は見つかりませんでした</h3><p>次のテーマから試してください。</p>'+buttons+'</div>';
+    }
+}
+$('searchBtn').onclick=search;
+$('query').onkeydown=e=>{if(e.key==='Enter')search()};
+$('categories').innerHTML=[...new Set(articles.map(a=>a.cat))].map(x=>'<button type="button" class="chip" data-category="'+x+'">'+x+'</button>').join('');
+document.addEventListener('click',e=>{let b=e.target.closest('[data-category]');if(b){$('query').value=b.dataset.category;search();}});
+
+// ==========================================
+// 経験学習サイクルのロジック
+// ==========================================
+const cycleAppData = {
+    questions: [],
+    selectedQuestion: "",
+    researchText: "",
+    reflectionText: "",
+    nextStepsText: ""
+};
+
+function addCycleQuestion() {
+    const input = $('cycle-qInput');
+    const val = input.value.trim();
+    if (val) {
+        cycleAppData.questions.push(val);
+        input.value = '';
+        renderCycleQuestions();
+    }
+}
+
+if($('cycle-qInput')) {
+    $('cycle-qInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addCycleQuestion();
+        }
+    });
+}
+
+function removeCycleQuestion(index) {
+    cycleAppData.questions.splice(index, 1);
+    renderCycleQuestions();
+}
+
+function renderCycleQuestions() {
+    const list = $('cycle-qList');
+    if(!list) return;
+    list.innerHTML = '';
+    cycleAppData.questions.forEach((q, i) => {
+        const li = document.createElement('li');
+        li.style.display = 'flex';
+        li.style.justifyContent = 'space-between';
+        li.style.alignItems = 'center';
+        li.style.padding = '8px 12px';
+        li.style.marginBottom = '6px';
+        li.style.background = '#f8fafc';
+        li.style.border = '1px solid #e2e8f0';
+        li.style.borderRadius = '10px';
+        li.style.fontSize = '13px';
+        
+        li.innerHTML = `<span>${esc(q)}</span><button type="button" onclick="removeCycleQuestion(${i})" style="border:0; background:none; color:#ef4444; font-weight:bold; padding:2px 6px;">削除</button>`;
+        list.appendChild(li);
+    });
+}
+
+function formatText(str) {
+    return esc(str).replace(/\n/g, '<br>');
+}
+
+function cycleNext(current) {
+    if (current === 1) {
+        if (cycleAppData.questions.length === 0) {
+            alert("知りたいことを1つ以上追加してください。");
+            return;
+        }
+        const radioList = $('cycle-radioList');
+        radioList.innerHTML = '';
+        cycleAppData.questions.forEach((q) => {
+            const label = document.createElement('label');
+            label.style.display = 'flex';
+            label.style.alignItems = 'center';
+            label.style.gap = '8px';
+            label.style.padding = '8px';
+            label.style.cursor = 'pointer';
+            
+            const radio = document.createElement('input');
+            radio.type = 'radio';
+            radio.name = 'cycleSelectedQuestion';
+            radio.value = q;
+            radio.style.accentColor = 'var(--blue)';
+            radio.style.width = '18px';
+            radio.style.height = '18px';
+            
+            if (q === cycleAppData.selectedQuestion) {
+                radio.checked = true;
+            }
+            
+            label.appendChild(radio);
+            label.appendChild(document.createTextNode(q));
+            radioList.appendChild(label);
+        });
+    } else if (current === 2) {
+        const selected = document.querySelector('input[name="cycleSelectedQuestion"]:checked');
+        if (!selected) {
+            alert("深掘りしたい問いを1つ選択してください。");
+            return;
+        }
+        cycleAppData.selectedQuestion = selected.value;
+        document.querySelectorAll('.cycle-display-question').forEach(el => {
+            el.textContent = cycleAppData.selectedQuestion;
+        });
+    } else if (current === 3) {
+        const val = $('cycle-researchArea').value.trim();
+        if (!val) {
+            alert("調べたことを入力してください。");
+            return;
+        }
+        cycleAppData.researchText = val;
+    } else if (current === 4) {
+        const val = $('cycle-reflectionArea').value.trim();
+        if (!val) {
+            alert("感想や気づきを入力してください。");
+            return;
+        }
+        cycleAppData.reflectionText = val;
+    } else if (current === 5) {
+        const val = $('cycle-nextStepsArea').value.trim();
+        if (!val) {
+            alert("次に使える方法やリンクを入力してください。");
+            return;
+        }
+        cycleAppData.nextStepsText = val;
+
+        $('cycle-resQuestion').textContent = cycleAppData.selectedQuestion;
+        $('cycle-resResearch').innerHTML = formatText(cycleAppData.researchText);
+        $('cycle-resReflection').innerHTML = formatText(cycleAppData.reflectionText);
+        $('cycle-resNextSteps').innerHTML = formatText(cycleAppData.nextStepsText);
+    }
+
+    $(`cycle-step${current}`).style.display = 'none';
+    $(`cycle-step${current + 1}`).style.display = 'block';
+    window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function cyclePrev(current) {
+    $(`cycle-step${current}`).style.display = 'none';
+    $(`cycle-step${current - 1}`).style.display = 'block';
+    window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// Compass Zero 診断用の専用ロジック
+const allCompassCards = [
+    { cat: "ソロ・コネクト", text: "1人で黙々と作業を完了させて、『お疲れ様』とだけ言える環境", axis: "s_c", scoreFor: "S" },
+    { cat: "ソロ・コネクト", text: "チャットや対面で、チームのメンバーとワイワイ意見を交わしながら進める作業", axis: "s_c", scoreFor: "C" },
+    { cat: "ソロ・コネクト", text: "自分のペースだけでスケジュールを組んで、誰とも話さず一日を終える", axis: "s_c", scoreFor: "S" },
+    { cat: "ソロ・コネクト", text: "グループワークで、みんなのバラバラな意見をホワイトボードに整理してまとめる", axis: "s_c", scoreFor: "C" },
+    { cat: "ソロ・コネクト", text: "バイト先や学校で、初対面の人に笑顔でハキハキと案内や説明をする", axis: "s_c", scoreFor: "C" },
+    { cat: "ソロ・コネクト", text: "複数人のLINEやチャットで、全員の予定を調整して日時を決める", axis: "s_c", scoreFor: "C" },
+    { cat: "ソロ・コネクト", text: "意見が割れている人と人の間に入って、「じゃあこうしようか」と落としどころを探す", axis: "s_c", scoreFor: "C" },
+    { cat: "ソロ・コネクト", text: "部屋にこもり、パソコンの画面やガジェットの光だけで世界を構築する作業に没頭する", axis: "s_c", scoreFor: "S" },
+    { cat: "オペレーション・クリエイト", text: "スマホのカメラロールに溜まった写真を、綺麗にフォルダ分けして整理する", axis: "o_k", scoreFor: "O" },
+    { cat: "オペレーション・クリエイト", text: "レシートや細かい領収書を、日付順にきっちり並べて管理する", axis: "o_k", scoreFor: "O" },
+    { cat: "オペレーション・クリエイト", text: "散らかったデスクの上やペンケースの中身を、使いやすくピシッと並べ替える", axis: "o_k", scoreFor: "O" },
+    { cat: "オペレーション・クリエイト", text: "決められたルールや手順通りに、ノートの文字を端から端まで綺麗に写す", axis: "o_k", scoreFor: "O" },
+    { cat: "オペレーション・クリエイト", text: "誰もやっていない文化祭の装飾や、新しい企画のアイデアをゼロから考える", axis: "o_k", scoreFor: "K" },
+    { cat: "オペレーション・クリエイト", text: "真っ白なノートに、自分の好きな世界観やストーリーの構想を自由に書き殴る", axis: "o_k", scoreFor: "K" },
+    { cat: "オペレーション・クリエイト", text: "「もっとこうしたら面白そう！」と、今あるルールをガラッと変える提案をする", axis: "o_k", scoreFor: "K" },
+    { cat: "オペレーション・クリエイト", text: "決まったテンプレートを使わず、自分のセンスでポスターやスライドのデザインを組む", axis: "o_k", scoreFor: "K" },
+    { cat: "ディテール・ビッグピクチャー", text: "長い文章やマニュアルの中から、誤字脱字やルールの抜けを見つける", axis: "d_b", scoreFor: "D" },
+    { cat: "ディテール・ビッグピクチャー", text: "エクセルやノートの細かい数字のズレを、時間をかけてチェックし直す", axis: "d_b", scoreFor: "D" },
+    { cat: "ディテール・ビッグピクチャー", text: "カレンダーやスケジュール表の予定を、日時順にきっちりきれいに書き込む", axis: "d_b", scoreFor: "B" },
+    { cat: "ディテール・ビッグピクチャー", text: "まだ誰も思いついていないような、ユニークな遊びやイベントの計画を思いつく", axis: "d_b", scoreFor: "B" },
+    { cat: "ディテール・ビッグピクチャー", text: "部屋のレイアウトを「なんかこっちの方がワクワクする！」という直感だけで一気に模様替えする", axis: "d_b", scoreFor: "B" },
+    { cat: "ディテール・ビッグピクチャー", text: "ホワイトボード一面を使って、図やマインドマップをダイナミックに描き殴る", axis: "d_b", scoreFor: "B" },
+    { cat: "ディテール・ビッグピクチャー", text: "プロジェクト全体のゴールや大枠の戦略をパッと直感で掴む", axis: "d_b", scoreFor: "B" },
+    { cat: "フィジカル・テック", text: "重い荷物を運んだり、段ボールを組み立てたりして、リアルな空間を片付ける", axis: "f_t", scoreFor: "F" },
+    { cat: "フィジカル・テック", text: "パソコンの画面に向かって、黙々とデータを入力したりショートカットを使いこなす", axis: "f_t", scoreFor: "T" },
+    { cat: "フィジカル・テック", text: "工具やハサミを使って、目の前のものを実際に修理したり工作したりする", axis: "f_t", scoreFor: "F" },
+    { cat: "フィジカル・テック", text: "スマホの便利アプリや新しいガジェットの設定をいじって、快適にカスタマイズする", axis: "f_t", scoreFor: "T" },
+    { cat: "フィジカル・テック", text: "実際の店舗のディスプレイや、棚の商品の配置を綺麗に整えて見栄えを良くする", axis: "f_t", scoreFor: "F" },
+    { cat: "フィジカル・テック", text: "プログラミングやツールを使って、めんどくさい作業を自動化する仕組みを考える", axis: "f_t", scoreFor: "T" },
+    { cat: "フィジカル・テック", text: "外に行って、実際に自分の足で歩きながらリサーチや買い出しをして回る", axis: "f_t", scoreFor: "F" }
+];
+
+const compassTitles = {
+    "SODF": "絶対防壁の管理人（エーテル・キーパー）", "SODT": "禁忌の数式解析者（コード・アナリスト）",
+    "SOBF": "世界を彩る境界の造形師（ワールド・セッター）", "SOBT": "効率世界を統べる自動機構（オートマトン）",
+    "SKDF": "物質界の錬金術師（マテリアル・クラフター）", "SKDT": "虚空の魔導プログラマー（アルゴリズム・ウィッチ）",
+    "SKBF": "独り歩む孤高の創世神（ソロ・クリエイター）", "SKBT": "電脳世界を創る神託の建築家（アークテリクス）",
+    "CODF": "混沌を鎮める調停の騎士（コンダクター）", "CODT": "真実を見抜く深淵の審問官（ガーディアン）",
+    "COBF": "楽園を維持する聖域の守護者（オペレーター）", "COBT": "運命の糸を紡ぐ羅針盤（ナビゲーター）",
+    "CKDF": "混沌を束ねる狂騒の使者（ファシリテーター）", "CKDT": "真実を暴く禁断の探求者（イノベーター）",
+    "CKBF": "熱狂の嵐を呼ぶ群青の支配者（プロデューサー）", "CKBT": "未来を俯瞰する星詠みの戦略家（ストラテジスト）"
+};
+
+const compassDetailedAnalysis = {
+    "SODF": { desc: "決まったルールや秩序を忠実に守り、細部の乱れを完璧に整えること。", aruaru: "ノートやテキストの綺麗さにこだわり、汚れるとモヤモヤする。", subjects: "📖 古典・漢文", faculties: ["文学部", "家政学部"], env: "静かで自分のペースが守られる環境。", routes: ["資料管理", "事務処理"], advice: "丁寧さと正確さは最大の武器です。" },
+    "SODT": { desc: "データの海からバグや不自然な点を見つけ出し、精巧な仕組みを支える。", aruaru: "説明書を隅々まで読み込み、エラー原因を執念で探すのが好き。", subjects: "💻 情報・数学", faculties: ["情報学部", "理学部"], env: "静寂が保たれPCに向き合える環境。", routes: ["インフラ保守", "セキュリティ"], advice: "細部を見逃さない観察力は非常に重宝されます。" },
+    "SOBF": { desc: "全体のバランスや美しさを直感的に整え、居心地の良い空間をつくる。", aruaru: "資料の余白や文字の配置が気になり、こっそり直したくなる。", subjects: "🎨 美術・図工", faculties: ["芸術学部", "建築学部"], env: "美意識を反映できる専用スペース。", routes: ["空間デザイン", "編集"], advice: "直感的な美の基準を大切にしてください。" },
+    "SOBT": { desc: "無駄な手間を省いて作業効率を極限まで最適化する。", aruaru: "スマホのホーム画面が綺麗に整理されていないと気が済まない。", subjects: "💻 情報処理", faculties: ["情報科学部"], env: "合理的にシステム化された環境。", routes: ["自動化ツール開発", "社内SE"], advice: "効率化能力はどんな組織でも強力なスキルです。" },
+    "SKDF": { desc: "前例のない状態から、素材やアイデアを自分の手でゼロから形にする。", aruaru: "好きな作業に没頭しすぎて、気づいたら何時間も経っている。", subjects: "🛠️ 技術・美術", faculties: ["芸術学部", "理工学部"], env: "深く没頭できるアトリエのような環境。", routes: ["専門職", "ものづくり職人"], advice: "妥協のないこだわりを信じ抜いてください。" },
+    "SKDT": { desc: "デジタル空間にシステムやコンテンツを独創的に構築する。", aruaru: "夜更かししてゲームや創作、プログラミングに没頭してしまう。", subjects: "💻 プログラミング", faculties: ["情報学部", "工学部"], env: "自由度が高い開発環境。", routes: ["ゲーム開発", "Webクリエイター"], advice: "アイデアをどんどんコードや形に落とし込んでいきましょう。" },
+    "SKBF": { desc: "独自の直感やひらめきで、誰も見たことのない表現を生み出す。", aruaru: "「誰もやったことがないやり方」に強く惹かれる。", subjects: "🎨 美術・音楽", faculties: ["芸術学部"], env: "ルールに縛られないオープンなフィールド。", routes: ["アーティスト"], advice: "常識にとらわれない直感が未来を作ります。" },
+    "SKBT": { desc: "新しい概念を独創的にデザインし、未来の仕組みを組み立てる。", aruaru: "「もしこんなサービスがあれば」とひたすら妄想する。", subjects: "💻 情報デザイン", faculties: ["デザイン学部"], env: "最先端のアイデアが飛び交う環境。", routes: ["UI/UXデザイナー", "新規事業企画"], advice: "自由な発想力を掛け合わせ、新しい風を送り込んでください。" },
+    "CODF": { desc: "現場やチームの間に入り、混乱しがちな状況をしっかりと整理する。", aruaru: "グループワークで、裏方や全体の進行管理を自然と引き受ける。", subjects: "📋 公民・国語", faculties: ["社会学部", "法学部"], env: "役割分担やルールが明確な環境。", routes: ["イベント制作", "公務員"], advice: "細やかな気配りと調整力がチーム全体を支えます。" },
+    "CODT": { desc: "チームと連携し、ミスやルールの抜けを多角的にチェックする。", aruaru: "文章やテストの答案から、パッと一発で誤字脱字を見つけるのが得意。", subjects: "📖 国語", faculties: ["文学部"], env: "チェックの役割がはっきり与えられた環境。", routes: ["QAエンジニア", "校正"], advice: "見逃さないその目はプロジェクトの信頼を守ります。" },
+    "COBF": { desc: "心地よいコミュニケーションで、相手が求める手厚いサポートを提供する。", aruaru: "周りが困っていると、言われる前にすぐ声をかけて手伝う。", subjects: "🌐 外国語", faculties: ["国際学部", "観光学部"], env: "温かい人間関係に満ちた環境。", routes: ["コンシェルジュ", "カスタマーサクセス"], advice: "おもてなしの心と親しみやすさは素晴らしい才能です。" },
+    "COBT": { desc: "チームの方向性を整え、みんなを正しいゴールへ向けてナビゲートする。", aruaru: "作業のタイムスケジュールや担当割を自然と作る。", subjects: "🌐 地理・歴史", faculties: ["経営学部", "経済学部"], env: "活発なコミュニケーションが取れる環境。", routes: ["プロジェクトマネージャー"], advice: "統率力はリーダーとして大きく花開きます。" },
+    "CKDF": { desc: "混沌とした現場に飛び込み、柔軟さで落としどころを器用に見つける。", aruaru: "初対面の場所でも持ち前のノリですぐに打ち解ける。", subjects: "🗣️ 英語表現", faculties: ["総合政策学部", "社会学部"], env: "変化が多く毎日違う刺激がある環境。", routes: ["コミュニティマネージャー", "営業"], advice: "フットワークの軽さは新しい関係性を切り拓く武器です。" },
+    "CKDT": { desc: "不満やデータを分析し、そこから新しいアイデアの種を見つけ出す。", aruaru: "身の回りの仕組みの粗に気づき、調べまくる。", subjects: "🔬 理科・数学", faculties: ["経済学部", "社会学部"], env: "仮説検証を楽しめる知的な環境。", routes: ["UXリサーチャー", "マーケティング分析"], advice: "「なぜ？」を深掘りする探求心が新しい価値を発見します。" },
+    "CKBF": { desc: "人を巻き込み、熱量を高めてその場に大きなムーブメントを起こす。", aruaru: "学校の行事などで自然とクラスのテンションを引っ張る。", subjects: "🎭 体育・芸術", faculties: ["メディア学部", "経営学部"], env: "エネルギッシュで盛り上がれる環境。", routes: ["イベントプロデューサー"], advice: "人を巻き込む熱量とエネルギーはまわりを動かします。" },
+    "CKBT": { desc: "大きなビジョンを創り出し、周囲をワクワクさせながら未来へ動かす。", aruaru: "「未来はどうなっているか」と大きな夢を語るのが好き。", subjects: "🌐 総合的な探究", faculties: ["総合政策学部", "経営学部"], env: "新しい挑戦を応援してくれる先進的な環境。", routes: ["起業家・事業家"], advice: "大きなビジョンで新しい道を切り拓いていってください。" }
+};
+
+let compassIdx = 0;
+let compassScores = { S: 0, C: 0, O: 0, K: 0, D: 0, B: 0, F: 0, T: 0 };
+
+function startCompassQuiz() {
+    $('c-screen-top').classList.add('hidden');
+    $('c-screen-quiz').classList.remove('hidden');
+    compassIdx = 0;
+    compassScores = { S: 0, C: 0, O: 0, K: 0, D: 0, B: 0, F: 0, T: 0 };
+    loadCompassCard();
+}
+
+function loadCompassCard() {
+    if(compassIdx >= allCompassCards.length) {
+        showCompassLoadingAndResult();
+        return;
+    }
+    const card = allCompassCards[compassIdx];
+    $('c-card-cat').innerText = card.cat;
+    $('c-card-text').innerText = card.text;
+    $('c-progress-text').innerText = `カード: ${compassIdx + 1} / ${allCompassCards.length}`;
+}
+
+function answerCompassCard(isHeiki) {
+    const card = allCompassCards[compassIdx];
+    if(isHeiki) {
+        compassScores[card.scoreFor]++;
+    } else {
+        const opposites = { S: 'C', C: 'S', O: 'K', K: 'O', D: 'B', B: 'D', F: 'T', T: 'F' };
+        compassScores[opposites[card.scoreFor]]++;
+    }
+    compassIdx++;
+    loadCompassCard();
+}
+
+function showCompassLoadingAndResult() {
+    $('c-screen-quiz').classList.add('hidden');
+    $('c-screen-loading').classList.remove('hidden');
+
+    setTimeout(() => {
+        calculateCompassResult();
+        $('c-screen-loading').classList.add('hidden');
+        $('c-screen-result').classList.remove('hidden');
+    }, 2000);
+}
+
+function calculateCompassResult() {
+    const sOrC = compassScores.S >= compassScores.C ? "S" : "C";
+    const oOrK = compassScores.O >= compassScores.K ? "O" : "K";
+    const dOrB = compassScores.D >= compassScores.B ? "D" : "B";
+    const fOrT = compassScores.F >= compassScores.T ? "F" : "T";
+
+    const code = sOrC + oOrK + dOrB + fOrT;
+    const title = compassTitles[code] || "覚醒せし自由の旅人";
+    const analysis = compassDetailedAnalysis[code] || {
+        desc: "あなたは独自のバランス感覚と才能を持ち合わせています。",
+        aruaru: "自分のペースを守りたい瞬間が多い。",
+        subjects: "📚 総合的な学習・探求",
+        faculties: ["総合学部・教養学部"],
+        env: "柔軟な環境。",
+        routes: ["専門性を高めるルート"],
+        advice: "自分の心地よさを基準に選択していきましょう。"
+    };
+
+    $('c-result-code').innerText = `コード: ${code}`;
+    $('c-result-title').innerText = `「${title}」`;
+
+    $('c-axis-scores').innerHTML = `
+        <div class="bg-white p-2 rounded-xl shadow-xs">エネルギー: ${sOrC === 'S' ? 'ソロ型' : 'コネクト型'}</div>
+        <div class="bg-white p-2 rounded-xl shadow-xs">アプローチ: ${oOrK === 'O' ? 'オペレーション' : 'クリエイト'}</div>
+        <div class="bg-white p-2 rounded-xl shadow-xs">こだわり: ${dOrB === 'D' ? 'ディテール' : 'ビッグピクチャー'}</div>
+        <div class="bg-white p-2 rounded-xl shadow-xs">エンジン: ${fOrT === 'F' ? 'フィジカル' : 'テック・情報'}</div>
+    `;
+
+    $('c-result-desc').innerText = analysis.desc;
+    $('c-result-aruaru').innerText = analysis.aruaru;
+    $('c-result-subjects').innerText = analysis.subjects;
+
+    $('c-career-faculties').innerHTML = analysis.faculties.map(f => `<li>🎓 ${f}</li>`).join('');
+    $('c-career-env').innerText = analysis.env;
+    $('c-career-routes').innerHTML = analysis.routes.map(r => `<li>・${r}</li>`).join('');
+    $('c-career-advice').innerText = analysis.advice;
+}
+
+function showCompassCareerScreen() {
+    $('c-screen-result').classList.add('hidden');
+    $('c-screen-career').classList.remove('hidden');
+}
+
+function backToCompassResult() {
+    $('c-screen-career').classList.add('hidden');
+    $('c-screen-result').classList.remove('hidden');
+}
+
+function resetCompass() {
+    $('c-screen-career').classList.add('hidden');
+    $('c-screen-result').classList.add('hidden');
+    $('c-screen-top').classList.remove('hidden');
+}
+
+show(location.hash.slice(1)||'home');
+</script>
+</body>
+</html>
